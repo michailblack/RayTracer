@@ -75,15 +75,15 @@ Window::Window(const WindowConfig& config) :
 		Throw(std::runtime_error("failed to create window"));
 	}
 
-	GLFWimage icon;
-	icon.pixels = stbi_load("../assets/textures/Vulkan.png", &icon.width, &icon.height, nullptr, 4);
-	if (icon.pixels == nullptr)
-	{
-		Throw(std::runtime_error("failed to load icon"));
-	}
-
-	glfwSetWindowIcon(window_, 1, &icon);
-	stbi_image_free(icon.pixels);
+	// GLFWimage icon;
+	// icon.pixels = stbi_load("../assets/textures/Vulkan.png", &icon.width, &icon.height, nullptr, 4);
+	// if (icon.pixels == nullptr)
+	// {
+	// 	Throw(std::runtime_error("failed to load icon"));
+	// }
+	//
+	// glfwSetWindowIcon(window_, 1, &icon);
+	// stbi_image_free(icon.pixels);
 
 	if (config.CursorDisabled)
 	{
