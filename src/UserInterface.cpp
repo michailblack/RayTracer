@@ -149,108 +149,265 @@ bool UserInterface::WantsToCaptureMouse() const
 
 void UserInterface::DrawSettings()
 {
-	if (!Settings().ShowSettings)
-	{
-		return;
-	}
+    if (!Settings().ShowSettings)
+    {
+        return;
+    }
 
-	const float distance = 10.0f;
-	const ImVec2 pos = ImVec2(distance, distance);
-	const ImVec2 posPivot = ImVec2(0.0f, 0.0f);
-	ImGui::SetNextWindowPos(pos, ImGuiCond_Always, posPivot);
+    // Custom styling to make it look like a different application
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16.0f, 16.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 12.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 6.0f);
 
-	const auto flags =
-		ImGuiWindowFlags_AlwaysAutoResize |
-		ImGuiWindowFlags_NoCollapse |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoSavedSettings;
+    // Custom colors for a different look
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.14f, 0.18f, 0.95f));
+    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.2f, 0.25f, 0.3f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.25f, 0.3f, 0.35f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.3f, 0.35f, 0.4f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.25f, 0.3f, 0.6f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.3f, 0.35f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.3f, 0.35f, 0.4f, 0.8f));
 
-	if (ImGui::Begin("Settings", &Settings().ShowSettings, flags))
-	{
-		std::vector<const char*> scenes;
-		for (const auto& scene : SceneList::AllScenes)
-		{
-			scenes.push_back(scene.first.c_str());
-		}
+    const auto& io = ImGui::GetIO();
+    const float distance = 10.0f;
+    const ImVec2 pos = ImVec2(io.DisplaySize.x - distance, distance);
+    const ImVec2 posPivot = ImVec2(1.0f, 0.0f);
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always, posPivot);
 
-		const auto& window = descriptorPool_->Device().Surface().Instance().Window();
+    const auto flags =
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoSavedSettings;
 
-		ImGui::Text("Help");
-		ImGui::Separator();
-		ImGui::BulletText("F1: toggle Settings.");
-		ImGui::BulletText("F2: toggle Statistics.");
-		ImGui::BulletText(
-			"%c%c%c%c/SHIFT/CTRL: move camera.", 
-			std::toupper(window.GetKeyName(GLFW_KEY_W, 0)[0]),
-			std::toupper(window.GetKeyName(GLFW_KEY_A, 0)[0]),
-			std::toupper(window.GetKeyName(GLFW_KEY_S, 0)[0]),
-			std::toupper(window.GetKeyName(GLFW_KEY_D, 0)[0]));
-		ImGui::BulletText("L/R Mouse: rotate camera/scene.");
-		ImGui::NewLine();
+    if (ImGui::Begin("⚙ Configuration Panel", &Settings().ShowSettings, flags))
+    {
+        std::vector<const char*> scenes;
+        for (const auto& scene : SceneList::AllScenes)
+        {
+            scenes.push_back(scene.first.c_str());
+        }
 
-		ImGui::Text("Scene");
-		ImGui::Separator();
-		ImGui::PushItemWidth(-1);
-		ImGui::Combo("##SceneList", &Settings().SceneIndex, scenes.data(), static_cast<int>(scenes.size()));
-		ImGui::PopItemWidth();
-		ImGui::NewLine();
+        const auto& window = descriptorPool_->Device().Surface().Instance().Window();
 
-		ImGui::Text("Ray Tracing");
-		ImGui::Separator();
-		ImGui::Checkbox("Enable ray tracing", &Settings().IsRayTraced);
-		ImGui::Checkbox("Accumulate rays between frames", &Settings().AccumulateRays);
-		uint32_t min = 1, max = 128;
-		ImGui::SliderScalar("Samples", ImGuiDataType_U32, &Settings().NumberOfSamples, &min, &max);
-		min = 1, max = 32;
-		ImGui::SliderScalar("Bounces", ImGuiDataType_U32, &Settings().NumberOfBounces, &min, &max);
-		ImGui::NewLine();
+        // Help Section with collapsing header
+        if (ImGui::CollapsingHeader("📖 Controls & Navigation", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Indent(12.0f);
+            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "🔧 F1:");
+            ImGui::SameLine(); ImGui::Text("Toggle Configuration Panel");
 
-		ImGui::Text("Camera");
-		ImGui::Separator();
-		ImGui::SliderFloat("FoV", &Settings().FieldOfView, UserSettings::FieldOfViewMinValue, UserSettings::FieldOfViewMaxValue, "%.0f");
-		ImGui::SliderFloat("Aperture", &Settings().Aperture, 0.0f, 1.0f, "%.2f");
-		ImGui::SliderFloat("Focus", &Settings().FocusDistance, 0.1f, 20.0f, "%.1f");
-		ImGui::NewLine();
+            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "📊 F2:");
+            ImGui::SameLine(); ImGui::Text("Toggle Performance Statistics");
 
-		ImGui::Text("Profiler");
-		ImGui::Separator();
-		ImGui::Checkbox("Show heatmap", &Settings().ShowHeatmap);
-		ImGui::SliderFloat("Scaling", &Settings().HeatmapScale, 0.10f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
-		ImGui::NewLine();
-	}
-	ImGui::End();
+            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "🎮 %c%c%c%c/SHIFT/CTRL:",
+                std::toupper(window.GetKeyName(GLFW_KEY_W, 0)[0]),
+                std::toupper(window.GetKeyName(GLFW_KEY_A, 0)[0]),
+                std::toupper(window.GetKeyName(GLFW_KEY_S, 0)[0]),
+                std::toupper(window.GetKeyName(GLFW_KEY_D, 0)[0]));
+            ImGui::SameLine(); ImGui::Text("Camera Movement");
+
+            ImGui::TextColored(ImVec4(0.7f, 0.9f, 1.0f, 1.0f), "🖱 L/R Mouse:");
+            ImGui::SameLine(); ImGui::Text("Rotate Camera/Scene");
+            ImGui::Unindent(12.0f);
+            ImGui::Spacing();
+        }
+
+        // Scene Selection with modern styling
+        if (ImGui::CollapsingHeader("🌍 Scene Management", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Indent(12.0f);
+            ImGui::Text("Active Scene:");
+            ImGui::PushItemWidth(-1);
+            if (ImGui::BeginCombo("##SceneList", scenes[Settings().SceneIndex]))
+            {
+                for (int i = 0; i < scenes.size(); i++)
+                {
+                    bool is_selected = (Settings().SceneIndex == i);
+                    if (ImGui::Selectable(scenes[i], is_selected))
+                        Settings().SceneIndex = i;
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::PopItemWidth();
+            ImGui::Unindent(12.0f);
+            ImGui::Spacing();
+        }
+
+        // Ray Tracing with enhanced layout
+        if (ImGui::CollapsingHeader("✨ Ray Tracing Engine", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Indent(12.0f);
+
+            // Toggle switches
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Enable Ray Tracing:");
+            ImGui::SameLine(180);
+            ImGui::Checkbox("##EnableRT", &Settings().IsRayTraced);
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Frame Accumulation:");
+            ImGui::SameLine(180);
+            ImGui::Checkbox("##AccumulateRays", &Settings().AccumulateRays);
+
+            ImGui::Separator();
+
+            // Sliders with better spacing
+            ImGui::Text("Quality Settings:");
+            uint32_t min = 1, max = 128;
+            ImGui::Text("Sample Count:");
+            ImGui::SameLine(120);
+            ImGui::PushItemWidth(160);
+            ImGui::SliderScalar("##Samples", ImGuiDataType_U32, &Settings().NumberOfSamples, &min, &max);
+            ImGui::PopItemWidth();
+
+            min = 1, max = 32;
+            ImGui::Text("Bounce Limit:");
+            ImGui::SameLine(120);
+            ImGui::PushItemWidth(160);
+            ImGui::SliderScalar("##Bounces", ImGuiDataType_U32, &Settings().NumberOfBounces, &min, &max);
+            ImGui::PopItemWidth();
+
+            ImGui::Unindent(12.0f);
+            ImGui::Spacing();
+        }
+
+        // Camera settings with icons
+        if (ImGui::CollapsingHeader("📷 Camera Properties", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Indent(12.0f);
+
+            ImGui::Text("Field of View:");
+            ImGui::SameLine(120);
+            ImGui::PushItemWidth(160);
+            ImGui::SliderFloat("##FoV", &Settings().FieldOfView, UserSettings::FieldOfViewMinValue, UserSettings::FieldOfViewMaxValue, "%.0f°");
+            ImGui::PopItemWidth();
+
+            ImGui::Text("Aperture:");
+            ImGui::SameLine(120);
+            ImGui::PushItemWidth(160);
+            ImGui::SliderFloat("##Aperture", &Settings().Aperture, 0.0f, 1.0f, "f/%.2f");
+            ImGui::PopItemWidth();
+
+            ImGui::Text("Focus Distance:");
+            ImGui::SameLine(120);
+            ImGui::PushItemWidth(160);
+            ImGui::SliderFloat("##Focus", &Settings().FocusDistance, 0.1f, 20.0f, "%.1fm");
+            ImGui::PopItemWidth();
+
+            ImGui::Unindent(12.0f);
+            ImGui::Spacing();
+        }
+
+        // Performance profiler with better visualization
+        if (ImGui::CollapsingHeader("📈 Performance Analysis", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Indent(12.0f);
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Heat Map Overlay:");
+            ImGui::SameLine(180);
+            ImGui::Checkbox("##ShowHeatmap", &Settings().ShowHeatmap);
+
+            if (Settings().ShowHeatmap)
+            {
+                ImGui::Text("Intensity Scale:");
+                ImGui::SameLine(120);
+                ImGui::PushItemWidth(160);
+                ImGui::SliderFloat("##HeatmapScale", &Settings().HeatmapScale, 0.10f, 10.0f, "%.2fx", ImGuiSliderFlags_Logarithmic);
+                ImGui::PopItemWidth();
+            }
+
+            ImGui::Unindent(12.0f);
+        }
+    }
+    ImGui::End();
+
+    // Pop all style modifications
+    ImGui::PopStyleColor(7);
+    ImGui::PopStyleVar(5);
 }
 
 void UserInterface::DrawOverlay(const Statistics& statistics)
 {
-	if (!Settings().ShowOverlay)
-	{
-		return;
-	}
+    if (!Settings().ShowOverlay)
+    {
+        return;
+    }
 
-	const auto& io = ImGui::GetIO();
-	const float distance = 10.0f;
-	const ImVec2 pos = ImVec2(io.DisplaySize.x - distance, distance);
-	const ImVec2 posPivot = ImVec2(1.0f, 0.0f);
-	ImGui::SetNextWindowPos(pos, ImGuiCond_Always, posPivot);
-	ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
+    // Enhanced styling for the overlay (avoiding size-affecting changes)
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 4.0f));
 
-	const auto flags =
-		ImGuiWindowFlags_AlwaysAutoResize |
-		ImGuiWindowFlags_NoDecoration |
-		ImGuiWindowFlags_NoFocusOnAppearing |
-		ImGuiWindowFlags_NoMove |
-		ImGuiWindowFlags_NoNav |
-		ImGuiWindowFlags_NoSavedSettings;
+    // Modern overlay color scheme
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.12f, 0.16f, 0.85f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.95f, 1.0f, 1.0f));
 
-	if (ImGui::Begin("Statistics", &Settings().ShowOverlay, flags))
-	{
-		ImGui::Text("Statistics (%dx%d):", statistics.FramebufferSize.width, statistics.FramebufferSize.height);
-		ImGui::Separator();
-		ImGui::Text("Frame rate: %.1f fps", statistics.FrameRate);
-		ImGui::Text("Primary ray rate: %.2f Gr/s", statistics.RayRate);
-		ImGui::Text("Accumulated samples:  %u", statistics.TotalSamples);
-	}
-	ImGui::End();
+    const auto& io = ImGui::GetIO();
+    const float distance = 10.0f;
+    const ImVec2 pos = ImVec2(distance, distance);
+    const ImVec2 posPivot = ImVec2(0.0f, 0.0f);
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always, posPivot);
+
+    const auto flags =
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoNav |
+        ImGuiWindowFlags_NoSavedSettings;
+
+    if (ImGui::Begin("##PerformanceMonitor", &Settings().ShowOverlay, flags))
+    {
+        // Add manual spacing for better layout
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));
+        ImGui::Indent(8.0f);
+
+        // Header with resolution info
+        ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "⚡ PERFORMANCE MONITOR");
+
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Resolution: %dx%d",
+                          statistics.FramebufferSize.width, statistics.FramebufferSize.height);
+
+        // Thin separator line
+        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.4f, 0.6f, 0.8f, 0.5f));
+        ImGui::Separator();
+        ImGui::PopStyleColor();
+
+        // Performance metrics with consistent formatting to prevent sliding
+        // Frame rate with color based on performance
+        ImVec4 fpsColor;
+        if (statistics.FrameRate >= 60.0f)
+            fpsColor = ImVec4(0.3f, 0.9f, 0.3f, 1.0f); // Green for good fps
+        else if (statistics.FrameRate >= 30.0f)
+            fpsColor = ImVec4(0.9f, 0.7f, 0.2f, 1.0f); // Yellow for medium fps
+        else
+            fpsColor = ImVec4(0.9f, 0.3f, 0.3f, 1.0f); // Red for low fps
+
+        ImGui::TextColored(ImVec4(0.8f, 0.9f, 1.0f, 1.0f), "🖼 Frame Rate:");
+        ImGui::SameLine(110);
+        ImGui::TextColored(fpsColor, "%6.1f fps", statistics.FrameRate);
+
+        // Ray rate with consistent width formatting
+        ImGui::TextColored(ImVec4(0.8f, 0.9f, 1.0f, 1.0f), "⚡ Ray Rate:");
+        ImGui::SameLine(110);
+        ImGui::TextColored(ImVec4(0.5f, 0.9f, 0.7f, 1.0f), "%6.2f Gr/s", statistics.RayRate);
+
+        // Sample accumulation with consistent formatting
+        ImGui::TextColored(ImVec4(0.8f, 0.9f, 1.0f, 1.0f), "📊 Samples:");
+        ImGui::SameLine(110);
+        ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), "%8u", statistics.TotalSamples);
+        ImGui::Unindent(8.0f);
+        ImGui::Dummy(ImVec2(0.0f, 4.0f));
+    }
+    ImGui::End();
+
+    // Pop all style modifications
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(2);
 }
